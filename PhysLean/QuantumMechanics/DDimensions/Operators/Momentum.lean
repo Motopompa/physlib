@@ -112,10 +112,76 @@ lemma momentumOperatorSchwartz_isSymmetric : (momentumOperatorSchwartz i).IsSymm
   simp only [LinearMap.coe_comp, LinearEquiv.coe_coe, ContinuousLinearMap.coe_coe,
     Function.comp_apply, LinearEquiv.symm_apply_apply, schwartzEquiv_inner, momentumOperator_apply,
     neg_mul, map_neg, map_mul, Complex.conj_I, Complex.conj_ofReal, neg_neg, mul_neg]
-  -- Need integration by parts and `starRingEnd ∂[i] = ∂[i] starRingEnd`:
-  -- ⊢ ∫ (x : Space d), Complex.I * ↑↑ℏ * (starRingEnd ℂ) (Space.deriv i (⇑f) x) * f' x =
-  -- ∫ (x : Space d), -((starRingEnd ℂ) (f x) * (Complex.I * ↑↑ℏ * Space.deriv i (⇑f') x))
-  sorry
+  have f_diff : Differentiable ℝ (⇑f) := f.differentiable
+  have f'_diff : Differentiable ℝ (⇑f') := f'.differentiable
+  have starf_diff : Differentiable ℝ (fun x => (starRingEnd ℂ) (f x)) := 
+    Complex.conjCLE.differentiable.comp f_diff
+  have fderiv_star_eq : ∀ x, fderiv ℝ (fun y => (starRingEnd ℂ) (f y)) x = 
+      Complex.conjCLE.toContinuousLinearMap.comp (fderiv ℝ (⇑f) x) := by
+    intro x
+    have h1 : (fun y => (starRingEnd ℂ) (f y)) = Complex.conjCLE ∘ f := rfl
+    rw [h1, fderiv_comp x Complex.conjCLE.differentiableAt (f_diff x)]
+    congr 1
+    exact Complex.conjCLE.toContinuousLinearMap.fderiv
+  have fderiv_star_apply : ∀ x, fderiv ℝ (fun y => (starRingEnd ℂ) (f y)) x (basis i) =
+      (starRingEnd ℂ) (fderiv ℝ (⇑f) x (basis i)) := by
+    intro x
+    rw [fderiv_star_eq]
+    simp only [ContinuousLinearMap.comp_apply, ContinuousLinearEquiv.coe_coe]
+    rfl
+  let df : 𝓢(Space d, ℂ) := ((SchwartzMap.evalCLM ℂ (Space d) ℂ (basis i)) ((SchwartzMap.fderivCLM ℂ (Space d) ℂ) f))
+  let df' : 𝓢(Space d, ℂ) := ((SchwartzMap.evalCLM ℂ (Space d) ℂ (basis i)) ((SchwartzMap.fderivCLM ℂ (Space d) ℂ) f'))
+  have df_eq : ∀ x, df x = fderiv ℝ (⇑f) x (basis i) := fun x => rfl
+  have df'_eq : ∀ x, df' x = fderiv ℝ (⇑f') x (basis i) := fun x => rfl
+  have norm_star_eq : ∀ z : ℂ, ‖(starRingEnd ℂ) z‖ = ‖z‖ := fun z => Complex.norm_conj z
+  have hf'g : MeasureTheory.Integrable (fun x => (fderiv ℝ (fun x => (starRingEnd ℂ) (f x)) x) (basis i) * f' x) MeasureTheory.volume := by
+    simp_rw [fderiv_star_apply]
+    have hC : ∀ x, ‖df x‖ ≤ (SchwartzMap.seminorm ℂ 0 0) df := fun x => df.norm_le_seminorm ℂ x
+    have hdom : ∀ x, ‖(starRingEnd ℂ) (fderiv ℝ (⇑f) x (basis i)) * f' x‖ ≤ (SchwartzMap.seminorm ℂ 0 0) df * ‖f' x‖ := by
+      intro x
+      rw [← df_eq]
+      calc ‖(starRingEnd ℂ) (df x) * f' x‖ 
+          = ‖(starRingEnd ℂ) (df x)‖ * ‖f' x‖ := norm_mul _ _
+        _ = ‖df x‖ * ‖f' x‖ := by rw [norm_star_eq]
+        _ ≤ (SchwartzMap.seminorm ℂ 0 0) df * ‖f' x‖ := mul_le_mul_of_nonneg_right (hC x) (norm_nonneg _)
+    apply MeasureTheory.Integrable.mono' (f'.integrable.norm.const_mul _) (by measurability)
+    filter_upwards with x using hdom x
+  have hfg' : MeasureTheory.Integrable (fun x => (starRingEnd ℂ) (f x) * (fderiv ℝ (⇑f') x) (basis i)) MeasureTheory.volume := by
+    have hC : ∀ x, ‖f x‖ ≤ (SchwartzMap.seminorm ℂ 0 0) f := fun x => f.norm_le_seminorm ℂ x
+    have hdom : ∀ x, ‖(starRingEnd ℂ) (f x) * (fderiv ℝ (⇑f') x) (basis i)‖ ≤ (SchwartzMap.seminorm ℂ 0 0) f * ‖df' x‖ := by
+      intro x
+      rw [← df'_eq]
+      calc ‖(starRingEnd ℂ) (f x) * df' x‖ 
+          = ‖(starRingEnd ℂ) (f x)‖ * ‖df' x‖ := norm_mul _ _
+        _ = ‖f x‖ * ‖df' x‖ := by rw [norm_star_eq]
+        _ ≤ (SchwartzMap.seminorm ℂ 0 0) f * ‖df' x‖ := mul_le_mul_of_nonneg_right (hC x) (norm_nonneg _)
+    apply MeasureTheory.Integrable.mono' (df'.integrable.norm.const_mul _) (by measurability)
+    filter_upwards with x using hdom x
+  have hfg : MeasureTheory.Integrable (fun x => (starRingEnd ℂ) (f x) * f' x) MeasureTheory.volume := by
+    have hC : ∀ x, ‖f x‖ ≤ (SchwartzMap.seminorm ℂ 0 0) f := fun x => f.norm_le_seminorm ℂ x
+    have hdom : ∀ x, ‖(starRingEnd ℂ) (f x) * f' x‖ ≤ (SchwartzMap.seminorm ℂ 0 0) f * ‖f' x‖ := by
+      intro x
+      calc ‖(starRingEnd ℂ) (f x) * f' x‖ 
+          = ‖(starRingEnd ℂ) (f x)‖ * ‖f' x‖ := norm_mul _ _
+        _ = ‖f x‖ * ‖f' x‖ := by rw [norm_star_eq]
+        _ ≤ (SchwartzMap.seminorm ℂ 0 0) f * ‖f' x‖ := mul_le_mul_of_nonneg_right (hC x) (norm_nonneg _)
+    apply MeasureTheory.Integrable.mono' (f'.integrable.norm.const_mul _) (by measurability)
+    filter_upwards with x using hdom x
+  have ibp := integral_mul_fderiv_eq_neg_fderiv_mul_of_integrable (μ := MeasureTheory.volume)
+    (f := fun x => (starRingEnd ℂ) (f x)) (g := ⇑f') (v := basis i)
+    hf'g hfg' hfg starf_diff f'_diff
+  simp_rw [fderiv_star_apply] at ibp
+  simp only [Space.deriv]
+  have lhs_eq : ∀ x, Complex.I * ↑↑ℏ * (starRingEnd ℂ) (fderiv ℝ (⇑f) x (basis i)) * f' x =
+      (Complex.I * ↑↑ℏ) * ((starRingEnd ℂ) (fderiv ℝ (⇑f) x (basis i)) * f' x) := fun x => by ring
+  have rhs_eq : ∀ x, (starRingEnd ℂ) (f x) * (Complex.I * ↑↑ℏ * fderiv ℝ (⇑f') x (basis i)) =
+      (Complex.I * ↑↑ℏ) * ((starRingEnd ℂ) (f x) * fderiv ℝ (⇑f') x (basis i)) := fun x => by ring
+  simp_rw [lhs_eq, rhs_eq]
+  simp only [MeasureTheory.integral_neg]
+  simp only [← smul_eq_mul (a := Complex.I * ↑↑ℏ)]
+  rw [MeasureTheory.integral_smul, MeasureTheory.integral_smul]
+  rw [ibp]
+  simp only [smul_neg, neg_neg]
 
 /-- The symmetric momentum unbounded operators with domain the Schwartz submodule
   of the Hilbert space. -/
