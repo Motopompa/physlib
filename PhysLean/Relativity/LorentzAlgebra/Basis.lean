@@ -145,21 +145,20 @@ lemma rotationGenerator_mem (i : Fin 3) : rotationGenerator i ∈ lorentzAlgebra
     simp only [Sum.elim_inr]
     fin_cases i <;> fin_cases μ <;> fin_cases ν <;> simp [rotationGenerator]
 
-/-!
-## TODO: Properties of Generators
+/-- Boost generators are symmetric: K_iᵀ = K_i. -/
+lemma boostGenerator_transpose (i : Fin 3) :
+    (boostGenerator i)ᵀ = boostGenerator i :=
+  sorry
 
-The following properties are documented in the docstrings but not yet formally proven.
-These should be established in future PRs to complete the characterization of the generators.
--/
+/-- Boost generators are traceless: tr(K_i) = 0. -/
+lemma boostGenerator_trace (i : Fin 3) :
+    Matrix.trace (boostGenerator i) = 0 :=
+  sorry
 
-TODO "BOOST_SYM" "Prove that boost generators are symmetric: \
-  (boostGenerator i)ᵀ = boostGenerator i"
-
-TODO "BOOST_TRACE" "Prove that boost generators are traceless: \
-  Matrix.trace (boostGenerator i) = 0"
-
-TODO "ROT_ANTISYM" "Prove that rotation generators are antisymmetric: \
-  (rotationGenerator i)ᵀ = -(rotationGenerator i)"
+/-- Rotation generators are antisymmetric: J_iᵀ = -J_i. -/
+lemma rotationGenerator_transpose (i : Fin 3) :
+    (rotationGenerator i)ᵀ = -(rotationGenerator i) :=
+  sorry
 
 TODO "ROT_TRACE" "Prove that rotation generators are traceless: \
   Matrix.trace (rotationGenerator i) = 0"
